@@ -35,6 +35,8 @@ def schemas(type, dx, dt):
                 F_aval = (f(Uold[i-1])+f(Uold[i]))/2 - (dx/(2*dt))*(Uold[i]-Uold[i-1])
                 U[i] = Uold[i] + (dt/dx)*(F_amont-F_aval)
             t = t + dt
+            #plt.plot(X,U)
+            #plt.show()
         print(U)
         plt.plot(X,U)
         plt.show()
