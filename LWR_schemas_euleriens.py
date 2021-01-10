@@ -3,19 +3,32 @@
 ############# LWR - schémas eulériens ###################
 #########################################################
 #########################################################
+
 import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-def rho_0(x):
-    return 1/(1+np.exp(-5*x))
+#########################################################
+################## Paramétrisation ######################
+#########################################################
+
+def rho_0(x): # créneau sur [0;0.2]
+    if x < 0.2 : 
+        return 1
+    else :
+        return 0
 
 def f(rho):
     return rho*(1-rho)
 
+def f_prime(rho):
+    return 1 - 2*rho
+
+#########################################################
+###################### Schémas ##########################
+#########################################################
+
 def schemas(type, dx, dt):
-    #dx = 0.1
-    #dt = 0.1
     road_length = 1
     simu_duration = 10 
     N = math.floor(road_length/dx)
@@ -26,19 +39,40 @@ def schemas(type, dx, dt):
         U[i] = rho_0(X[i])
     if type == "LF":
         t = 0
+        plt.figure(1)
+        plt.clf()
+        plt.plot(X,U)
         while t < T :
-            # il faut faire attention aux termes de bord, pour l'instant manque le premier et le dernier, conditions périodiques ?
             Uold = U
-            print(Uold)
             for i in range(1,N):
                 F_amont = (f(Uold[i])+f(Uold[i+1]))/2 - (dx/(2*dt))*(Uold[i+1]-Uold[i])
                 F_aval = (f(Uold[i-1])+f(Uold[i]))/2 - (dx/(2*dt))*(Uold[i]-Uold[i-1])
                 U[i] = Uold[i] + (dt/dx)*(F_amont-F_aval)
+            U[0] = Uold[-1] # domaine périodique
+            U[-1] = Uold[0] # domaine périodique
             t = t + dt
-            #plt.plot(X,U)
-            #plt.show()
-        print(U)
+            plt.figure(1)
+            plt.clf()
+            plt.plot(X,U)
+            plt.pause(0.1)
+    if type == "LW":
+        t = 0
+        plt.figure(1)
+        plt.clf()
         plt.plot(X,U)
-        plt.show()
+        while t < T :
+            Uold = U
+            for i in range(1,N):
+                F_amont = (f(Uold[i])+f(Uold[i+1]))/2 - (dx/(2*dt))*f_prime((Uold[i+1]+Uold[i])/2)*(f(Uold[i+1]-f(Uold[i])))
+                F_aval = (f(Uold[i-1])+f(Uold[i]))/2 - (dx/(2*dt))*f_prime((Uold[i]+Uold[i-1])/2)*(f(Uold[i]-f(Uold[i-1])))
+                U[i] = Uold[i] + (dt/dx)*(F_amont-F_aval)
+            U[0] = Uold[-1] # domaine périodique
+            U[-1] = Uold[0] # domaine périodique
+            t = t + dt
+            plt.figure(1)
+            plt.clf()
+            plt.plot(X,U)
+            plt.pause(0.1)
 
-schemas("LF",0.1,1)
+schemas("LF",0.1,0.2)
+#schemas("LW",0.1,0.2)
