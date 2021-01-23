@@ -15,12 +15,12 @@ from random import uniform
 
 def rho_0(x,type): # créneau sur [0;0.2]
     if type == "creneau":
-        if x < 0.2 : 
-            return 1
+        if x < 0.6 and x> 0.3 : 
+            return 0.5
         else :
             return 0
     if type == "constante":
-        return 1
+        return 0.5
     if type == "parabole":
         if x<1:
             return 10*x*(1-x)
@@ -36,25 +36,21 @@ def f_prime(rho):
 def V(Vmax,x):
     return Vmax*max([0,10-x])
 
+road_length = 1
+simu_duration = 10 
+
 #########################################################
 ###################### Schémas ##########################
 #########################################################
 
-def schemas(mailles, CI, type, dx, dt):
-    l = dx/10 # taille d'une voiture
-    road_length = 1
-    simu_duration = 10 
-    N = math.floor(road_length/dx)
+def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
+    dx = road_length/N
+    l = dx/2 # taille d'une voiture
     pas = dx*np.ones(N)
     sommets = np.zeros(N+1)
     sommets[1:] = np.cumsum(pas) # coordonnées xi+1/2 des extrémités des mailles
-    #print(sommets)
-    mes = [] # les mesures des mailles mi
-    for i in range(N) : 
-        mes.append(sommets[i+1]-sommets[i])
-    #print(mes)
     centres = 0.5*(sommets[:-1] + sommets[1:]) # les coordonnées xi des centres des mailles
-    #print(centres)
+    Y = [0 for i in range(N)]
     T = simu_duration/dt
     U = [0 for i in range(0,N)]
     if mailles == "fixes":
@@ -62,17 +58,17 @@ def schemas(mailles, CI, type, dx, dt):
     if mailles == "alea": 
         sigma = [0 for i in range(0,N+1)]
         for i in range (1,N):
-            sigma[i] = uniform(0,road_length/50)/dt # on prend un nombre aléatoire entre 0 et un 50e de la longeur de la route, divisé par dt, pour que ce soit visible à l'échelle de temps où on regarde
+            sigma[i] = uniform(0,V(Vmax,U[i]))
         sigma[0] = 0
         sigma[N] = 0
-        dt = CFL(sommets,sigma,l) # on teste de prendre dx/10 comme taille de voiture
+        dt = CFL(sommets,sigma,l) 
     if mailles == "FTL":
         sigma = [0 for i in range(0,N+1)]
         for i in range (1,N):
-            sigma[i] = V(road_length/50,l/(centres[i]-centres[i-1]))
+            sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
         sigma[0] = 0
         sigma[N] = 0
-        dt = CFL(sommets,sigma,l) # on teste de prendre dx/10 comme taille de voiture
+        dt = CFL(sommets,sigma,l) 
 
     G = [0 for i in range(0,N+1)]
     for i in range (0,N):
@@ -81,41 +77,97 @@ def schemas(mailles, CI, type, dx, dt):
     plt.figure(1)
     plt.clf()
     plt.plot(centres,U)
-    plt.pause(1)
+    plt.plot(centres, Y, "og")
+    plt.pause(pause)
     while t < T :
         if mailles == "alea":
             for i in range (1,N):
-                sigma[i] = uniform(0,road_length/50)/dt
-            sigma[0] = 0
-            sigma[N] = 0
-            dt = CFL(sommets,sigma,dx/10)
-        if mailles == "FTL":
-            for i in range (1,N):
-                sigma[i] = V(road_length/50,l/(centres[i]-centres[i-1]))
+                sigma[i] = uniform(0,V(Vmax,U[i]))
             sigma[0] = 0
             sigma[N] = 0
             dt = CFL(sommets,sigma,l)
+            #print(dt)
+        if mailles == "FTL":
+            for i in range (1,N):
+                sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
+            sigma[0] = 0
+            sigma[N] = 0
+            dt = CFL(sommets,sigma,l)
+            #print(dt)
+
         for i in range (0,N+1):
             sommets[i] = sommets[i] + dt*sigma[i]
+        if sommets[-1] - sommets[-2] < l:
+            sommets = np.delete(sommets,-2)
+            sommets = np.insert(sommets, 1, (sommets[0]+sommets[1])/4)
+
         centres = 0.5*(sommets[:-1] + sommets[1:])
         Uold = U
         if type == "upwind":
-            for i in range (0,N-1): # convention i + 1/2
-                if f_prime((Uold[i+1]+Uold[i])/2) >= 0:
-                    G[i+1] = f(Uold[i]) - sigma[i+1]*Uold[i]
+            for i in range (1,N): # convention i + 1/2
+                if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
+                    G[i] = f(Uold[i-1]) - sigma[i-1]*Uold[i-1]
                 else: 
-                    G[i+1] = f(Uold[i+1]) - sigma[i+1]*Uold[i]
-            if f_prime((Uold[0]+Uold[N-1])/2) >= 0:
-                G[N] = f(Uold[N-1]) - sigma[N]*Uold[N-1]
+                    G[i] = f(Uold[i]) - sigma[i]*Uold[i]
+            if (f_prime((Uold[0]+Uold[N-1])/2) - sigma[0]) >= 0:
+                G[0] = f(Uold[N-1]) - sigma[N-1]*Uold[N-1]
             else: 
-                G[N] = f(Uold[0]) - sigma[N]*Uold[N-1]
+                G[0] = f(Uold[0]) - sigma[0]*Uold[0]
+            G[N] = G[0] # conditions périodiques
         for i in range (0,N):
             U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
         t = t + dt
         plt.figure(1)
         plt.clf()
         plt.plot(centres,U)
-        plt.pause(1)
+        plt.plot(centres, Y, "og")
+        plt.pause(pause)
+
+'''
+def schemas_couplage(mailles, CI, type, taille_voiture, N, sommets, U, t):
+
+    Vmax = 1/50
+
+    if mailles == "fixes":
+        sigma = [0 for i in range(0,N+1)] # convention i + 1/2
+    if mailles == "alea": 
+        sigma = [0 for i in range(0,N+1)]
+        for i in range (1,N):
+            sigma[i] = uniform(0,Vmax)/dt # on prend un nombre aléatoire entre 0 et un 50e de la longeur de la route, divisé par dt, pour que ce soit visible à l'échelle de temps où on regarde
+        sigma[0] = 0
+        sigma[N] = 0
+        dt = CFL(sommets,sigma,taille_voiture) 
+    if mailles == "FTL":
+        sigma = [0 for i in range(0,N+1)]
+        for i in range (1,N):
+            sigma[i] = V(Vmax,taille_voiture/(centres[i]-centres[i-1]))
+        sigma[0] = 0
+        sigma[N] = 0
+        dt = CFL(sommets,sigma,taille_voiture) 
+
+    G = [0 for i in range(0,N+1)]
+    if t == 0 : 
+        for i in range (0,N):
+            U[i] = rho_0(centres[i],CI)
+
+    for i in range (0,N+1):
+        sommets[i] = sommets[i] + dt*sigma[i]
+    centres = 0.5*(sommets[:-1] + sommets[1:])
+    Uold = U
+    if type == "upwind":
+        for i in range (0,N-1): # convention i + 1/2
+            if (f_prime((Uold[i+1]+Uold[i])/2) - sigma[i]) >= 0:
+                G[i+1] = f(Uold[i]) - sigma[i]*Uold[i]
+            else: 
+                G[i+1] = f(Uold[i+1]) - sigma[i+1]*Uold[i+1]
+        if (f_prime((Uold[0]+Uold[N-1])/2) - sigma[N]) >= 0:
+            G[N] = f(Uold[N-1]) - sigma[N]*Uold[N-1]
+        else: 
+            G[N] = f(Uold[0]) - sigma[N]*Uold[N-1]
+    for i in range (0,N):
+        U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
+    return [sommets, centres, U]
+'''
 
 def CFL(sommets,sigma,l):
     # La condition CFL qui doit être vérifiée est : 
@@ -125,12 +177,16 @@ def CFL(sommets,sigma,l):
     # Cette fonction renvoie le dt à utiliser pour chaque nouvelle itération
 
     dt_list = []
-    for i in range (0,len(sommets)-1):
+    for i in range (1,len(sommets)-2):
         if sigma[i] > sigma[i+1]:
             dt_list.append((sommets[i+1]-sommets[i]-l)/(2*(sigma[i]-sigma[i+1]))) # on pourrait aussi ne pas diviser par 2, à tester
         else:
             dt_list.append((sommets[i+1]-sommets[i])/2)
     return min(dt_list)
+
+def verif_entropic(x1,x2):
+    # x1 et x2 sont les coordonnées 
+    return null
 
 ##### INFORMATIONS #####
 
@@ -141,6 +197,6 @@ def CFL(sommets,sigma,l):
 
 ##### EXEMPLES #####
 
-#schemas("fixes","parabole","upwind",0.01,0.004)
-#schemas("alea","parabole","upwind",0.01, 0.004) # le dx et le dt ne sont que pour les conditions initiales ici
-#schemas("FTL","parabole","upwind",0.01, 0.004) # le dx et le dt ne sont que pour les conditions initiales ici
+#schemas_test("fixes","creneau","upwind", 50,0.004, 0.01, 0.01)
+#schemas_test("alea","creneau","upwind", 50, 0.004, 0.01, 0.01) 
+schemas_test("FTL","creneau","upwind", 200, 0.004, 0.01, 0.01) 

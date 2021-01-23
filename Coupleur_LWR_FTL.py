@@ -24,11 +24,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-def coupleur_LWRversFTL(densite, sommets, nb_voitures_LWR1, surface_LWR1, surface_tampon):
+def coupleur_LWRversFTL(densite, sommets, surface_LWR1, check_surface_1, surface_tampon, x1):
     # les surfaces initiales sont calculées en dehors de la fonction coupleur, uniquement avec la donnée de rho_0
     L1 = 0.3 # début de la zone du péage
     #### Couplage LWR --> FTL ####
-    check_surface_1 = surface_LWR1/nb_voitures_LWR1 # surface correspondant à une voiture
     i = 0
     while length < 0.3 : 
         length = sommets[i]
@@ -39,6 +38,6 @@ def coupleur_LWRversFTL(densite, sommets, nb_voitures_LWR1, surface_LWR1, surfac
 
     return [voitures_versFTL + voitures_versFTL_tampon, surface_LWR1-surface, surface-voitures_versFTL*check_surface_1]
 
-def coupleur_FTLversLWR(): 
+def coupleur_FTLversLWR(x2): 
     L2 = 0.4 # fin de la zone du péage
     return null
