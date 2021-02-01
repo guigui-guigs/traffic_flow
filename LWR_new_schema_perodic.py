@@ -49,7 +49,6 @@ def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
     sommets = np.zeros(N+1)
     for i in range (0,N+1):
         sommets[i] = dx/2 + i*dx # coordonnées xi+1/2 des extrémités des mailles
-    print(sommets)
     centres = 0.5*(sommets[:-1] + sommets[1:]) # les coordonnées xi des centres des mailles
     #centres.append((sommets[0] + 1 - sommets[N])/2)
     Y = [0 for i in range(N)]
@@ -81,6 +80,10 @@ def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
     plt.plot(centres,U)
     plt.plot(centres, Y, "og")
     plt.pause(pause)
+
+    if t==0:
+        old_choc = 0.3
+
     while t < T :
         if mailles == "alea":
             for i in range (1,N):
@@ -116,6 +119,12 @@ def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
             sommets = np.insert(sommets, 0, 0)
 
         centres = 0.5*(sommets[:-1] + sommets[1:])
+
+        # Calcul de la vitesse du choc
+        new_choc = point_choc(centres, U)
+        print((new_choc-old_choc)/dt)
+        old_choc = new_choc
+
         Uold = U
         if type == "upwind":
             for i in range (1,N): # convention i + 1/2
@@ -201,17 +210,22 @@ def CFL(U, sommets, sigma, l):
         #dt_list.append((sommets[i+1]-sommets[i])*f_prime(U[i])) # ça fait des dt trop petit... vraiment ça la condition ?
     return min(dt_list)
 
-def verif_entropic(x1,x2): # je ne comprends pas comment écrire la formule
+def verif_entropic(x1,x2): 
     # x1 et x2 sont les coordonnées des chocs (dans le cas d'un créneau) où x2 > x1
     if (f(rho_0(x2,"creneau"))-f(rho_0(x1,"creneau")))/(rho_0(x2,"creneau")-rho_0(x1,"creneau")) < f_prime(rho_0(x2,"creneau")) and (f(rho_0(x2,"creneau"))-f(rho_0(x1,"creneau")))/(rho_0(x2,"creneau")-rho_0(x1,"creneau")) > f_prime(rho_0(x1,"creneau")) : 
         return "L'équation admet une solution entropique"
     else : 
         return "L'équation n'admet pas de solution entropique"
-'''
-def vitesse(centres,U):
-    while i<len(centres):
-'''
 
+def point_choc(centres,U):
+    # on parcourt la liste des U[i] pour voir où la dérivée est la plus grande
+    # on suit la vitesse de ce point donné
+    derive = []
+    i = 0
+    while i<len(centres)-1:
+        derive.append((U[i+1]-U[i])/(centres[i+1]-centres[i]))
+        i += 1 
+    return np.argmax(derive)
 
 ##### INFORMATIONS #####
 
@@ -225,4 +239,4 @@ def vitesse(centres,U):
 #schemas_test("fixes","creneau","upwind", 50,0.004, 0.01, 0.01)
 #schemas_test("alea","creneau","upwind", 50, 0.004, 0.01, 0.1) 
 schemas_test("FTL","creneau","upwind", 50, 0.004, 0.01, 0.1) 
-#verif_entropic(0.3, 0.6)
+#verif_entropic(0.2, 0.4)
