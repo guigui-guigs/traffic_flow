@@ -29,7 +29,8 @@ def coupleur_LWRversFTL(densite, sommets, surface_LWR1, check_surface_1, surface
     L1 = 0.3 # début de la zone du péage
     #### Couplage LWR --> FTL ####
     i = 0
-    while length < 0.3 : 
+    length = 0
+    while length < 0.3 and i < len(sommets)-1:
         length = sommets[i]
         i+=1
     surface = densite[i]*(sommets[i]-sommets[i-1])

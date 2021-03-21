@@ -13,9 +13,9 @@ from random import uniform
 ################## Paramétrisation ######################
 #########################################################
 
-def rho_0(x,type="creneau"): # créneau sur [0;0.2]
+def rho_0(x,type="creneau"): # créneau sur [0.1;0.2]
     if type == "creneau":
-        if x < 0.6 and x> 0.3 : 
+        if x < 0.2 and x> 0.1 : 
             return 0.5
         else :
             return 0
@@ -36,14 +36,14 @@ def f_prime(rho):
 def V(Vmax,x):
     return Vmax*max([0,10-x])
 
-road_length = 1
+road_length = 0.5
 simu_duration = 10 
 
 #########################################################
 ###################### Schémas ##########################
 #########################################################
 
-def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
+def schemas_couplage(mailles, CI, type, N, dt, Vmax, pause):
     dx = road_length/(N+1)
     l = dx/2 # taille d'une voiture
     sommets = np.zeros(N+1)
@@ -121,7 +121,8 @@ def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
         centres = 0.5*(sommets[:-1] + sommets[1:])
 
         # Calcul de la vitesse du choc
-        new_choc = point_choc(centres, U)
+        new_choc = centres[point_choc(centres, U)]
+        #print(new_choc)
         print((new_choc-old_choc)/dt)
         old_choc = new_choc
 
@@ -140,59 +141,56 @@ def schemas_test(mailles, CI, type, N, dt, Vmax, pause):
         for i in range (0,N):
             U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
         t = t + dt
+        #print(U)
         plt.figure(1)
         plt.clf()
         plt.plot(centres,U)
         plt.plot(centres, Y, "og")
         plt.pause(pause)
 
-'''
-def schemas_couplage(mailles, CI, type, l, N, sommets, U, t, go):
+# Construction d'un schéma qu'on appelle à chaque pas de temps
+def schemas_couplage_iteratif(road_length, l, Vmax, mailles, type, N, sommets, centres, Uold, dt, insert):
+    
+    # Retourne : densité U, les sommets, les centres et le pas de temps dt
+    U = [0 for i in range(0,N)]
+    if mailles == "fixes":
+        sigma = [0 for i in range(0,N+1)] # convention i + 1/2
+    if mailles == "FTL":
+        sigma = [0 for i in range(0,N+1)]
+        for i in range (1,N):
+            sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
+        sigma[0] = 0
+        sigma[N] = 0
+        dt = CFL(Uold, sommets,sigma,l) 
 
-    if go == False: # attention ne prend plus en compte les dt et les sigma comme ça...
-        if mailles == "alea":
-            for i in range (1,N):
-                sigma[i] = uniform(0,V(Vmax,U[i]))
-            sigma[0] = 0
-            sigma[N] = 0
-            dt = CFL(sommets,sigma,l)
-        if mailles == "FTL":
-            for i in range (1,N):
-                sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
-            sigma[0] = 0
-            sigma[N] = 0
-            dt = CFL(sommets,sigma,l)
-        return dt
+    G = [0 for i in range(0,N+1)]
 
-    else:
-        G = [0 for i in range(0,N+1)]
-        if t == 0 : 
-            for i in range (0,N):
-                U[i] = rho_0(centres[i],CI)
+    # Il faut voir ce qu'on fait, peut-être ne pas du tout réinsérer de mailles comme ce n'est plus périodique...
+    for i in range (0,N+1):
+        sommets[i] = sommets[i] + dt*sigma[i]
+    to_insert = False
+    if sommets[N] > road_length : 
+        sommets = np.delete(sommets,N)
+        if sommets[N] > 1:
+            to_insert = True
+    if (insert == True):
+        sommets = np.insert(sommets, 0, 0)
 
-        for i in range (0,N+1):
-            sommets[i] = sommets[i] + dt*sigma[i]
-        if sommets[-1] - sommets[-2] < l:
-            sommets = np.delete(sommets,-2)
-            sommets = np.insert(sommets, 1, (sommets[0]+sommets[1])/4)
+    centres = 0.5*(sommets[:-1] + sommets[1:])
 
-        centres = 0.5*(sommets[:-1] + sommets[1:])
-        Uold = U
-        if type == "upwind":
-            for i in range (1,N): # convention i + 1/2
-                if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
-                    G[i] = f(Uold[i-1]) - sigma[i-1]*Uold[i-1]
-                else: 
-                    G[i] = f(Uold[i]) - sigma[i]*Uold[i]
-            if (f_prime((Uold[0]+Uold[N-1])/2) - sigma[0]) >= 0:
-                G[0] = f(Uold[N-1]) - sigma[N-1]*Uold[N-1]
+    if type == "upwind":
+        for i in range (1,N): # convention i + 1/2
+            if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
+                G[i] = f(Uold[i-1]) - sigma[i-1]*Uold[i-1]
             else: 
-                G[0] = f(Uold[0]) - sigma[0]*Uold[0]
-            G[N] = G[0] # conditions périodiques
-        for i in range (0,N):
-            U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
-        return [sommets, centres, U]
-'''
+                G[i] = f(Uold[i]) - sigma[i]*Uold[i]
+        G[0] = 0
+    for i in range (0,N):
+        U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
+    
+    return([U, sommets, centres, dt])
+    
+
 
 def CFL(U, sommets, sigma, l):
     # La condition CFL qui doit être vérifiée est : 
@@ -236,7 +234,7 @@ def point_choc(centres,U):
 
 ##### EXEMPLES #####
 
-#schemas_test("fixes","creneau","upwind", 50,0.004, 0.01, 0.01)
-#schemas_test("alea","creneau","upwind", 50, 0.004, 0.01, 0.1) 
-schemas_test("FTL","creneau","upwind", 50, 0.004, 0.01, 0.1) 
+#schemas_couplage("fixes","creneau","upwind", 50,0.004, 0.01, 1)
+#schemas_couplage("alea","creneau","upwind", 50, 0.004, 0.01, 0.1) 
+#schemas_couplage("FTL","creneau","upwind", 20, 0.004, 0.01, 1) 
 #verif_entropic(0.2, 0.4)
