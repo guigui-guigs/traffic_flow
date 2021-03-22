@@ -29,20 +29,16 @@ def main():
     Vmax_FTL = 0.01
     Vmax_LWR2 = 0.01
 
-    M1 = 30 # nombre de voitures dans la zone LWR 1
-    M2 = 15 # zone FTL
-    M3 = 20 # zone LWR 2
+    M1 = 100 # nombre de voitures dans la zone LWR 1
 
     # Définition des différentes zones de circulation entre [0;1]
     x1 = 0.4 # début de la zone FTL
     x2 = 0.8 # fin de la zone FTL 
 
     N1 = math.floor(x1/dx) 
-    N2 = math.floor((x2-x1)/dx) 
     N3 = math.floor((1-x2)/dx) 
 
     dx_1 = x1/(N1+1)
-    dx_2 = (x2-x1)/(N2+1)
     dx_3 = (1-x2)/(N3+1)
 
     sommets_1 = np.zeros(N1+1)
@@ -50,10 +46,8 @@ def main():
         sommets_1[i] = dx_1/2 + i*dx_1 # coordonnées xi+1/2 des extrémités des mailles
     centres_1 = 0.5*(sommets_1[:-1] + sommets_1[1:]) # les coordonnées xi des centres des mailles
 
-    sommets_2 = np.zeros(N2+1)
-    for i in range (0,N2+1):
-        sommets_2[i] = x1 + dx_2/2 + i*dx_2 # coordonnées xi+1/2 des extrémités des mailles
-    centres_2 = 0.5*(sommets_2[:-1] + sommets_2[1:]) # les coordonnées xi des centres des mailles
+    sommets_2 = []
+    centres_2 = []
 
     sommets_3 = np.zeros(N3+1)
     for i in range (0,N3+1):
@@ -63,14 +57,14 @@ def main():
     U_1 = [0 for i in range(0,N1)]
     for i in range (0,N1):
         U_1[i] = rho_0(centres_1[i],"creneau") # voitures initialement présentes dans la zone LWR1
-    U_2 = [0.3 for i in range(0,N2)]
-    U_3 = [0.3 for i in range(0,N3)]
+    U_2 = []
+    U_3 = [0 for i in range(0,N3)]
 
     surface_LWR1 = calcul_aire(rho_0,0,1,1/1000)
-    check_surface_1 = surface_LWR1/M1 # surface correspondant à une voiture
+    check_surface = surface_LWR1/M1 # surface correspondant à une voiture
     surface_tampon_1 = 0
 
-    insert_LWR1 = False
+    insert_LWR1 = False # on insère de la densité enf fonction du flux G mais lequel ?
     insert_LWR2 = False
 
     t = 0
@@ -79,13 +73,16 @@ def main():
     plt.figure(1)
     plt.clf()
     plt.plot(centres,U)
+    Y = [0 for i in range(len(centres))]
+    plt.plot(centres, Y, "og")
+    plt.axis([0, 1, -0.1, 1])
     plt.pause(0.5)
 
     while t<T: 
 
-        result_LWR1 = schemas_couplage_iteratif(x1, taille_voiture, Vmax_LWR1, "fixes", "upwind", sommets_1, centres_1, U_1, dt, insert_LWR1)
-        result_FTL = schemas_couplage_iteratif(x2-x1, taille_voiture, Vmax_FTL, "FTL", "upwind", sommets_2, centres_2, U_2, dt, False)
-        result_LWR2 = schemas_couplage_iteratif(x2-x1, taille_voiture, Vmax_LWR2, "FTL", "upwind", sommets_3, centres_3, U_3, dt, insert_LWR2)
+        result_LWR1 = schemas_couplage_iteratif(0, x1, taille_voiture, Vmax_LWR1, "fixes", "upwind", sommets_1, centres_1, U_1, dt, insert_LWR1)
+        result_FTL = schemas_couplage_iteratif(x1, x2-x1, taille_voiture, Vmax_FTL, "FTL", "upwind", sommets_2, centres_2, U_2, dt, False)
+        result_LWR2 = schemas_couplage_iteratif(x2, 1-x2, taille_voiture, Vmax_LWR2, "fixes", "upwind", sommets_3, centres_3, U_3, dt, insert_LWR2)
 
         U_1 = result_LWR1[0]
         sommets_1 = result_LWR1[1]
@@ -106,7 +103,7 @@ def main():
         # Calcul du dt 
         dt = min(dt_1, dt_2, dt_3)
             
-        result_couplage_1 = coupleur_LWRversFTL(U_1, sommets_1, M1, surface_LWR1, surface_tampon_1, x1)
+        result_couplage_1 = coupleur_LWRversFTL(U_1, sommets_1, surface_LWR1, check_surface, surface_tampon_1, x1)
         transfert_voitures_FTL = result_couplage_1[0]
         surface_tampon_1 = result_couplage_1[1]
         
@@ -115,21 +112,21 @@ def main():
         #centres_2 = result_2[1]
         #U_2 = result_2[2]
 
-        #result_3 = schemas_couplage()
-        #sommets_3 = result_3[0]
-        #centres_3 = 0.5*(sommets_3[:-1] + sommets_3[1:])
-        #U_3 = result_3[1]
-
         centres = [*centres_1, *centres_2, *centres_3]
         U = [*U_1, *U_2, *U_3]
         plt.figure(1)
         plt.clf()
         plt.plot(centres,U)
+        Y = [0 for i in range(len(centres))]
+        plt.plot(centres, Y, "og")
+        plt.axis([0, 1, -0.1, 1])
         plt.pause(0.2)
 
-        # Comment on fait si l'insertion est saturée ?
-        sommets_2 = ajout_voitures_FTL(sommets_2, transfert_voitures_FTL, taille_voiture)
-
+        # Insertion des voitures dans la zone FTL 
+        # Si la zone est saturée on ne fait rien et on attend l'itération suivante pour voir si l'insertion est possible
+        if transfert_voitures_FTL > 0:
+            sommets_2 = ajout_voitures_FTL(sommets_2, transfert_voitures_FTL, taille_voiture)
+            
         t=t+dt
 
 def calcul_aire(f, x1, x2, dx):
