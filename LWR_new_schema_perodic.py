@@ -149,8 +149,9 @@ def schemas_couplage(mailles, CI, type, N, dt, Vmax, pause):
         plt.pause(pause)
 
 # Construction d'un schéma qu'on appelle à chaque pas de temps
-def schemas_couplage_iteratif(road_length, l, Vmax, mailles, type, N, sommets, centres, Uold, dt, insert):
+def schemas_couplage_iteratif(road_length, l, Vmax, mailles, type, sommets, centres, Uold, dt, insert):
     
+    N = len(sommets) - 1
     # Retourne : densité U, les sommets, les centres et le pas de temps dt
     U = [0 for i in range(0,N)]
     if mailles == "fixes":
@@ -161,7 +162,8 @@ def schemas_couplage_iteratif(road_length, l, Vmax, mailles, type, N, sommets, c
             sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
         sigma[0] = 0
         sigma[N] = 0
-        dt = CFL(Uold, sommets,sigma,l) 
+        if len(sommets)>2:
+            dt = CFL(Uold, sommets,sigma,l) 
 
     G = [0 for i in range(0,N+1)]
 
@@ -169,9 +171,12 @@ def schemas_couplage_iteratif(road_length, l, Vmax, mailles, type, N, sommets, c
     for i in range (0,N+1):
         sommets[i] = sommets[i] + dt*sigma[i]
     to_insert = False
-    if sommets[N] > road_length : 
-        sommets = np.delete(sommets,N)
-        if sommets[N] > 1:
+    if sommets[-1] > road_length :
+        sommets = np.delete(sommets,-1)
+        U = np.delete(U,-1)
+        Uold = np.delete(Uold,-1)
+        N = N-1
+        if sommets[-1] > 1:
             to_insert = True
     if (insert == True):
         sommets = np.insert(sommets, 0, 0)
@@ -188,7 +193,7 @@ def schemas_couplage_iteratif(road_length, l, Vmax, mailles, type, N, sommets, c
     for i in range (0,N):
         U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
     
-    return([U, sommets, centres, dt])
+    return([U, sommets, centres, dt, to_insert])
     
 
 

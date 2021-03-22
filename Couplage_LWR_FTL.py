@@ -5,6 +5,7 @@
 from LWR_new_schema_perodic import schemas_couplage_iteratif
 from LWR_new_schema_perodic import rho_0
 from Coupleur_LWR_FTL import coupleur_LWRversFTL
+from Coupleur_LWR_FTL import ajout_voitures_FTL
 from Coupleur_LWR_FTL import coupleur_FTLversLWR
 
 import numpy as np
@@ -34,7 +35,7 @@ def main():
 
     # Définition des différentes zones de circulation entre [0;1]
     x1 = 0.4 # début de la zone FTL
-    x2 = 0.5 # fin de la zone FTL 
+    x2 = 0.8 # fin de la zone FTL 
 
     N1 = math.floor(x1/dx) 
     N2 = math.floor((x2-x1)/dx) 
@@ -62,12 +63,15 @@ def main():
     U_1 = [0 for i in range(0,N1)]
     for i in range (0,N1):
         U_1[i] = rho_0(centres_1[i],"creneau") # voitures initialement présentes dans la zone LWR1
-    U_2 = [0 for i in range(0,N2)]
-    U_3 = [0 for i in range(0,N3)]
+    U_2 = [0.3 for i in range(0,N2)]
+    U_3 = [0.3 for i in range(0,N3)]
 
     surface_LWR1 = calcul_aire(rho_0,0,1,1/1000)
     check_surface_1 = surface_LWR1/M1 # surface correspondant à une voiture
     surface_tampon_1 = 0
+
+    insert_LWR1 = False
+    insert_LWR2 = False
 
     t = 0
     centres = [*centres_1, *centres_2, *centres_3]
@@ -79,32 +83,33 @@ def main():
 
     while t<T: 
 
-        result_LWR1 = schemas_couplage_iteratif(x1, taille_voiture, Vmax_LWR1, "fixes", "upwind", N1, sommets_1, centres_1, U_1, dt, False)
-        #result_FTL = schemas_couplage_iteratif(x2-x1, taille_voiture, Vmax_FTL, "FTL", "upwind", N2, sommets_2, centres_2, U_2, dt)
-        #result_LWR2 = schemas_couplage_iteratif(x2-x1, taille_voiture, Vmax_LWR2, "FTL", "upwind", N3, sommets_3, centres_3, U_3)
+        result_LWR1 = schemas_couplage_iteratif(x1, taille_voiture, Vmax_LWR1, "fixes", "upwind", sommets_1, centres_1, U_1, dt, insert_LWR1)
+        result_FTL = schemas_couplage_iteratif(x2-x1, taille_voiture, Vmax_FTL, "FTL", "upwind", sommets_2, centres_2, U_2, dt, False)
+        result_LWR2 = schemas_couplage_iteratif(x2-x1, taille_voiture, Vmax_LWR2, "FTL", "upwind", sommets_3, centres_3, U_3, dt, insert_LWR2)
 
         U_1 = result_LWR1[0]
         sommets_1 = result_LWR1[1]
         centres_1 = result_LWR1[2]
         dt_1 = result_LWR1[3]
 
-        #U_2 = result_FTL[0]
-        #sommets_2 = result_FTL[1]
-        #centres_2 = result_FTL[2]
-        #dt_2 = result_FTL[3]
+        U_2 = result_FTL[0]
+        sommets_2 = result_FTL[1]
+        centres_2 = result_FTL[2]
+        dt_2 = result_FTL[3]
 
-        #U_3 = result_LWR2[0]
-        #sommets_3 = result_LWR2[1]
-        #centres_3 = result_LWR2[2]
-        #dt_3 = result_LWR2[3]
+        U_3 = result_LWR2[0]
+        sommets_3 = result_LWR2[1]
+        centres_3 = result_LWR2[2]
+        dt_3 = result_LWR2[3]
+        insert_LWR1 = result_LWR2[4]
 
         # Calcul du dt 
-        #dt = min(dt_1, dt_2, dt_3)
-        dt = dt_1        
-
-        #result_couplage_1 = coupleur_LWRversFTL(U_1, sommets_1, M1, surface_LWR1, surface_tampon_1, x1)
-        #transfert_voitures_FTL = result_couplage_1[0]
-
+        dt = min(dt_1, dt_2, dt_3)
+            
+        result_couplage_1 = coupleur_LWRversFTL(U_1, sommets_1, M1, surface_LWR1, surface_tampon_1, x1)
+        transfert_voitures_FTL = result_couplage_1[0]
+        surface_tampon_1 = result_couplage_1[1]
+        
         #result_2 = schemas_couplage()
         #sommets_2 = result_2[0]
         #centres_2 = result_2[1]
@@ -121,6 +126,9 @@ def main():
         plt.clf()
         plt.plot(centres,U)
         plt.pause(0.2)
+
+        # Comment on fait si l'insertion est saturée ?
+        sommets_2 = ajout_voitures_FTL(sommets_2, transfert_voitures_FTL, taille_voiture)
 
         t=t+dt
 
