@@ -1,9 +1,7 @@
-# Brainstorming
-
 # A chaque pas de temps on fait tourner le schéma puis le coupleur 
 
-from LWR_new_schema_perodic import schemas_couplage_iteratif
-from LWR_new_schema_perodic import rho_0
+from schema_couplage import schemas_couplage_iteratif
+from schema_couplage import rho_0
 from Coupleur_LWR_FTL import coupleur_LWRversFTL
 from Coupleur_LWR_FTL import ajout_voitures_FTL
 from Coupleur_LWR_FTL import coupleur_FTLversLWR

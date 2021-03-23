@@ -1,0 +1,114 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+from random import uniform
+
+#########################################################
+################## Paramétrisation ######################
+#########################################################
+
+def rho_0(x,type="creneau"): # créneau sur [0.1;0.2]
+    if type == "creneau":
+        if x < 0.3 and x> 0.1 : 
+            return 0.5
+        else :
+            return 0
+    if type == "constante":
+        return 0.5
+    if type == "parabole":
+        if x<1:
+            return 10*x*(1-x)
+        else:
+            return 0
+
+def f(rho):
+    return rho*(1-rho)
+
+def f_prime(rho):
+    return 1 - 2*rho
+
+def V(Vmax,x):
+    return Vmax*max([0,0.5-x])
+
+# Construction d'un schéma qu'on appelle à chaque pas de temps
+def schemas_couplage_iteratif(start_road, road_length, l, Vmax, mailles, type, sommets, centres, Uold, dt, insert, x1, x2):
+
+    N = len(sommets) - 1 # signification de N ?
+    # Retourne : densité U, les sommets, les centres et le pas de temps dt
+    U = [0 for i in range(0,N)]
+    if mailles == "fixes":
+        sigma = [0 for i in range(0,N+1)] # convention i + 1/2
+    if mailles == "FTL":
+        sigma = [0 for i in range(0,N+1)]
+        for i in range (1,N):
+            sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
+        sigma[0] = 0
+        sigma[N] = 0
+        if len(sommets) > 2:
+            dt = CFL(Uold, sommets,sigma,l) 
+
+    G = [0 for i in range(0,N+1)]
+
+    # Il faut voir ce qu'on fait, peut-être ne pas du tout réinsérer de mailles comme ce n'est plus périodique...
+    for i in range (1,N):
+        sommets[i] = sommets[i] + dt*sigma[i]
+    to_insert_LWR2 = False
+    U_to_add = 0
+    if sommets[-2] > start_road + road_length - l/2:
+        sommets = np.delete(sommets,-2)
+        del U[-1]
+        U_to_add = Uold[-1]
+        del Uold[-1]
+        N = N-1
+        to_insert_LWR2 = True
+
+    '''
+    if (insert == True):
+        sommets = np.insert(sommets, 0, 0)
+    '''
+    
+    centres = 0.5*(sommets[:-1] + sommets[1:])
+
+    if type == "upwind":
+        for i in range (1,N): # convention i + 1/2
+            if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
+                G[i] = f(Uold[i-1]) - sigma[i-1]*Uold[i-1]
+            else: 
+                G[i] = f(Uold[i]) - sigma[i]*Uold[i]
+        G[0] = 0
+    for i in range (0,N):
+        U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
+    return([U, sommets, centres, dt, to_insert_LWR2, U_to_add])
+
+def CFL(U, sommets, sigma, l):
+    # La condition CFL qui doit être vérifiée est : 
+    # dt(sigma[i]-sigma[i+1]) < sommets[i+1] - sommets[i] - l où l est la taille d'un véhicule. On choisira de prendre dt = contrainte/2
+    # cette contrainte n'a du sens que si sigma[i] > sigma[i+1], autrement il n'y a pas de contrainte sur dt causée par les sigma, et on prent dt = dx/2 
+
+    # Cette fonction renvoie le dt à utiliser pour chaque nouvelle itération
+
+    dt_list = []
+    for i in range (0,len(sommets)-2):
+        if sigma[i] > sigma[i+1] :
+            dt_list.append((sommets[i+1]-sommets[i]-l)/(2*(sigma[i]-sigma[i+1]))) # on pourrait aussi ne pas diviser par 2, à tester
+        else:
+            dt_list.append((sommets[i+1]-sommets[i])/2)
+        #dt_list.append((sommets[i+1]-sommets[i])*f_prime(U[i])) # ça fait des dt trop petit... vraiment ça la condition ?
+    return min(dt_list)
+
+def verif_entropic(x1,x2): 
+    # x1 et x2 sont les coordonnées des chocs (dans le cas d'un créneau) où x2 > x1
+    if (f(rho_0(x2,"creneau"))-f(rho_0(x1,"creneau")))/(rho_0(x2,"creneau")-rho_0(x1,"creneau")) < f_prime(rho_0(x2,"creneau")) and (f(rho_0(x2,"creneau"))-f(rho_0(x1,"creneau")))/(rho_0(x2,"creneau")-rho_0(x1,"creneau")) > f_prime(rho_0(x1,"creneau")) : 
+        return "L'équation admet une solution entropique"
+    else : 
+        return "L'équation n'admet pas de solution entropique"
+
+def point_choc(centres,U):
+    # on parcourt la liste des U[i] pour voir où la dérivée est la plus grande
+    # on suit la vitesse de ce point donné
+    derive = []
+    i = 0
+    while i<len(centres)-1:
+        derive.append((U[i+1]-U[i])/(centres[i+1]-centres[i]))
+        i += 1 
+    return np.argmax(derive)
