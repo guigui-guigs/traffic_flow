@@ -23,7 +23,7 @@ def main():
     # Ces données évolueront mais sont ici pour paramétrer 
     simu_duration = 5
     T = simu_duration/dt
-    taille_voiture = dx/10
+    taille_voiture = dx/2
 
     Vmax_LWR1 = 0.01
     Vmax_FTL = 0.01
@@ -103,9 +103,10 @@ def main():
         # Calcul du dt 
         dt = min(dt_1, dt_2, dt_3)
             
-        result_couplage_1 = coupleur_LWRversFTL(U_1, sommets_1, surface_LWR1, check_surface, surface_tampon_1, x1)
+        result_couplage_1 = coupleur_LWRversFTL(U_1, sommets_1, check_surface, surface_tampon_1, x1)
         transfert_voitures_FTL = result_couplage_1[0]
         surface_tampon_1 = result_couplage_1[1]
+        U_transfert_versFTL = result_couplage_1[2]
         
         #result_2 = schemas_couplage()
         #sommets_2 = result_2[0]
@@ -120,13 +121,15 @@ def main():
         Y = [0 for i in range(len(centres))]
         plt.plot(centres, Y, "og")
         plt.axis([0, 1, -0.1, 1])
-        plt.pause(0.2)
+        plt.pause(0.01)
 
         # Insertion des voitures dans la zone FTL 
-        # Si la zone est saturée on ne fait rien et on attend l'itération suivante pour voir si l'insertion est possible
+        # Si la zone est saturée on ne fait rien et on attend l'itération suivante pour voir si l'insertion est possible : à implémenter
         if transfert_voitures_FTL > 0:
-            sommets_2 = ajout_voitures_FTL(sommets_2, transfert_voitures_FTL, taille_voiture)
-            
+            result = ajout_voitures_FTL(x1, sommets_2, transfert_voitures_FTL, taille_voiture, U_2, U_transfert_versFTL)
+            sommets_2 = result[0]
+            centres_2 = 0.5*(sommets_2[:-1] + sommets_2[1:])
+            U_2 = result[1]
         t=t+dt
 
 def calcul_aire(f, x1, x2, dx):

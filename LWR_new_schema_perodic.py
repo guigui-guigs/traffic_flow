@@ -163,7 +163,7 @@ def schemas_couplage_iteratif(start_road, road_length, l, Vmax, mailles, type, s
                 sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
             sigma[0] = 0
             sigma[N] = 0
-            if len(sommets)>2:
+            if len(sommets) > 2:
                 dt = CFL(Uold, sommets,sigma,l) 
 
         G = [0 for i in range(0,N+1)]
