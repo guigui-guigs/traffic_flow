@@ -15,7 +15,7 @@ from random import uniform
 
 def rho_0(x,type="creneau"): # créneau sur [0.1;0.2]
     if type == "creneau":
-        if x < 0.2 and x> 0.1 : 
+        if x < 0.3 and x> 0.1 : 
             return 0.5
         else :
             return 0
@@ -149,56 +149,50 @@ def schemas_couplage(mailles, CI, type, N, dt, Vmax, pause):
         plt.pause(pause)
 
 # Construction d'un schéma qu'on appelle à chaque pas de temps
-def schemas_couplage_iteratif(start_road, road_length, l, Vmax, mailles, type, sommets, centres, Uold, dt, insert):
+def schemas_couplage_iteratif(start_road, road_length, l, Vmax, mailles, type, sommets, centres, Uold, dt, insert, x1, x2):
 
-    if len(sommets) > 0:
-        N = len(sommets) - 1 # signification de N ?
-        # Retourne : densité U, les sommets, les centres et le pas de temps dt
-        U = [0 for i in range(0,N)]
-        if mailles == "fixes":
-            sigma = [0 for i in range(0,N+1)] # convention i + 1/2
-        if mailles == "FTL":
-            sigma = [0 for i in range(0,N+1)]
-            for i in range (1,N):
-                sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
-            sigma[0] = 0
-            sigma[N] = 0
-            if len(sommets) > 2:
-                dt = CFL(Uold, sommets,sigma,l) 
+    N = len(sommets) - 1 # signification de N ?
+    # Retourne : densité U, les sommets, les centres et le pas de temps dt
+    U = [0 for i in range(0,N)]
+    if mailles == "fixes":
+        sigma = [0 for i in range(0,N+1)] # convention i + 1/2
+    if mailles == "FTL":
+        sigma = [0 for i in range(0,N+1)]
+        for i in range (1,N):
+            sigma[i] = V(Vmax,l/(centres[i]-centres[i-1]))
+        sigma[0] = 0
+        sigma[N] = 0
+        if len(sommets) > 2:
+            dt = CFL(Uold, sommets,sigma,l) 
 
-        G = [0 for i in range(0,N+1)]
+    G = [0 for i in range(0,N+1)]
 
-        # Il faut voir ce qu'on fait, peut-être ne pas du tout réinsérer de mailles comme ce n'est plus périodique...
-        for i in range (0,N+1):
-            sommets[i] = sommets[i] + dt*sigma[i]
-        to_insert = False
-        if sommets[-1] > start_road + road_length :
-            sommets = np.delete(sommets,-1)
-            U = np.delete(U,-1)
-            Uold = np.delete(Uold,-1)
-            N = N-1
-            if sommets[-1] > 1:
-                to_insert = True
+    # Il faut voir ce qu'on fait, peut-être ne pas du tout réinsérer de mailles comme ce n'est plus périodique...
+    for i in range (1,N):
+        sommets[i] = sommets[i] + dt*sigma[i]
+    to_insert = False
+    if sommets[-1] > start_road + road_length :
+        sommets = np.delete(sommets,-1)
+        U = np.delete(U,-1)
+        Uold = np.delete(Uold,-1)
+        N = N-1
+        if sommets[-1] > 1:
+            to_insert = True
 
     if (insert == True):
         sommets = np.insert(sommets, 0, 0)
 
-    if len(sommets) > 0:
-        centres = 0.5*(sommets[:-1] + sommets[1:])
-        if type == "upwind":
-            for i in range (1,N): # convention i + 1/2
-                if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
-                    G[i] = f(Uold[i-1]) - sigma[i-1]*Uold[i-1]
-                else: 
-                    G[i] = f(Uold[i]) - sigma[i]*Uold[i]
-            G[0] = 0
-        for i in range (0,N):
-            U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
-        return([U, sommets, centres, dt, to_insert])
-    else : 
-        return ([],[],[],dt,False)
-    
-
+    centres = 0.5*(sommets[:-1] + sommets[1:])
+    if type == "upwind":
+        for i in range (1,N): # convention i + 1/2
+            if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
+                G[i] = f(Uold[i-1]) - sigma[i-1]*Uold[i-1]
+            else: 
+                G[i] = f(Uold[i]) - sigma[i]*Uold[i]
+        G[0] = 0
+    for i in range (0,N):
+        U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
+    return([U, sommets, centres, dt, to_insert])
 
 def CFL(U, sommets, sigma, l):
     # La condition CFL qui doit être vérifiée est : 
