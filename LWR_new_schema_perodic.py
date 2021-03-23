@@ -170,19 +170,23 @@ def schemas_couplage_iteratif(start_road, road_length, l, Vmax, mailles, type, s
     # Il faut voir ce qu'on fait, peut-être ne pas du tout réinsérer de mailles comme ce n'est plus périodique...
     for i in range (1,N):
         sommets[i] = sommets[i] + dt*sigma[i]
-    to_insert = False
-    if sommets[-1] > start_road + road_length :
-        sommets = np.delete(sommets,-1)
-        U = np.delete(U,-1)
-        Uold = np.delete(Uold,-1)
+    to_insert_LWR2 = False
+    U_to_add = 0
+    if sommets[-2] > start_road + road_length - l/2:
+        sommets = np.delete(sommets,-2)
+        del U[-1]
+        U_to_add = Uold[-1]
+        del Uold[-1]
         N = N-1
-        if sommets[-1] > 1:
-            to_insert = True
+        to_insert_LWR2 = True
 
+    '''
     if (insert == True):
         sommets = np.insert(sommets, 0, 0)
-
+    '''
+    
     centres = 0.5*(sommets[:-1] + sommets[1:])
+
     if type == "upwind":
         for i in range (1,N): # convention i + 1/2
             if (f_prime((Uold[i]+Uold[i-1])/2) - sigma[i]) >= 0:
@@ -192,7 +196,7 @@ def schemas_couplage_iteratif(start_road, road_length, l, Vmax, mailles, type, s
         G[0] = 0
     for i in range (0,N):
         U[i] = ((sommets[i+1]-sommets[i])*Uold[i] - dt*(G[i+1]-G[i]))/(sommets[i+1]-sommets[i] + (sigma[i+1]-sigma[i])*dt)
-    return([U, sommets, centres, dt, to_insert])
+    return([U, sommets, centres, dt, to_insert_LWR2, U_to_add])
 
 def CFL(U, sommets, sigma, l):
     # La condition CFL qui doit être vérifiée est : 

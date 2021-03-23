@@ -94,13 +94,14 @@ def main():
         sommets_2 = result_FTL[1]
         centres_2 = result_FTL[2]
         dt_2 = result_FTL[3]
+        insert_LWR2 = result_FTL[4]
+        U_to_add = result_FTL[5]
        
         result_LWR2 = schemas_couplage_iteratif(x2, 1-x2, taille_voiture, Vmax_LWR2, "fixes", "upwind", sommets_3, centres_3, U_3, dt, insert_LWR2, x1, x2)
         U_3 = result_LWR2[0]
         sommets_3 = result_LWR2[1]
         centres_3 = result_LWR2[2]
         dt_3 = result_LWR2[3]
-        insert_LWR1 = result_LWR2[4]
 
         # Calcul du dt 
         dt = min(dt_1, dt_2, dt_3)
@@ -109,12 +110,6 @@ def main():
         transfert_voitures_FTL += result_couplage_LWRversFTL[0]
         surface_tampon_1 = result_couplage_LWRversFTL[1]
         U_transfert_versFTL += result_couplage_LWRversFTL[2]
-        
-        #result_2 = schemas_couplage()
-        #sommets_2 = result_2[0]
-        #centres_2 = result_2[1]
-        #U_2 = result_2[2]
-
         # Insertion des voitures dans la zone FTL 
         # Si la zone est saturée on ne fait rien et on attend l'itération suivante pour voir si l'insertion est possible
         if transfert_voitures_FTL > 0:
@@ -124,6 +119,9 @@ def main():
             U_2 = result[1]
             transfert_voitures_FTL = result[2]
             U_transfert_versFTL = result[3]
+
+        if insert_LWR2 == True:
+            U_3 = coupleur_FTLversLWR(U_to_add, U_3)        
 
         centres = [*centres_1, *centres_2, *centres_3]
         U = [*U_1, *U_2, *U_3]

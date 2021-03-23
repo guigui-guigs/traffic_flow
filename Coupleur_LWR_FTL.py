@@ -67,6 +67,6 @@ def ajout_voitures_FTL(debut_FTL, sommets, nb_voitures, taille_voiture, U, U_tra
     reste_U_transfert = reste_U_transfert - (U_transfert/nb_voitures)*(nb_voitures-reste_voitures)
     return [new_sommets, new_U, reste_voitures, reste_U_transfert]
 
-def coupleur_FTLversLWR(x2): 
-    L2 = 0.4 # fin de la zone du péage
-    return "null"
+def coupleur_FTLversLWR(U_to_add, U_3): 
+    U_3[0] = U_3[0] + U_to_add
+    return U_3
