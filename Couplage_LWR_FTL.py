@@ -23,10 +23,10 @@ def main():
     # Ces données évolueront mais sont ici pour paramétrer 
     simu_duration = 5
     T = simu_duration/dt
-    taille_voiture = dx/2
+    taille_voiture = dx
 
     Vmax_LWR1 = 0.01
-    Vmax_FTL = dx/2
+    Vmax_FTL = 4*dx
     Vmax_LWR2 = 0.01
 
     M1 = 100 # nombre de voitures dans la zone LWR 1
@@ -64,6 +64,9 @@ def main():
     check_surface = surface_LWR1/M1 # surface correspondant à une voiture
     surface_tampon_1 = 0
 
+    transfert_voitures_FTL = 0
+    U_transfert_versFTL = 0
+
     insert_LWR1 = False # on insère de la densité enf fonction du flux G mais lequel ?
     insert_LWR2 = False
 
@@ -73,9 +76,9 @@ def main():
     plt.figure(1)
     plt.clf()
     plt.plot(centres,U)
-    Y = [0 for i in range(len(centres_2)-1)]
-    plt.plot(centres_2[1:-1], Y, "og")
-    plt.axis([0, 1, -0.1, 1])
+    Y = [0 for i in range(len(sommets_2)-2)]
+    plt.plot(sommets_2[1:-1], Y, "og")
+    plt.axis([0, 1, -0.1, 2])
     plt.pause(0.5)
 
     while t<T: 
@@ -101,11 +104,12 @@ def main():
 
         # Calcul du dt 
         dt = min(dt_1, dt_2, dt_3)
+        print(dt)
             
         result_couplage_LWRversFTL = coupleur_LWRversFTL(U_1, sommets_1, check_surface, surface_tampon_1, x1)
-        transfert_voitures_FTL = result_couplage_LWRversFTL[0]
+        transfert_voitures_FTL += result_couplage_LWRversFTL[0]
         surface_tampon_1 = result_couplage_LWRversFTL[1]
-        U_transfert_versFTL = result_couplage_LWRversFTL[2]
+        U_transfert_versFTL += result_couplage_LWRversFTL[2]
         
         #result_2 = schemas_couplage()
         #sommets_2 = result_2[0]
@@ -119,8 +123,8 @@ def main():
             sommets_2 = result[0]
             centres_2 = 0.5*(sommets_2[:-1] + sommets_2[1:])
             U_2 = result[1]
-            saturation = result[2]
-            print(saturation)
+            transfert_voitures_FTL = result[2]
+            U_transfert_versFTL = result[3]
 
         centres = [*centres_1, *centres_2, *centres_3]
         U = [*U_1, *U_2, *U_3]
@@ -129,7 +133,7 @@ def main():
         plt.plot(centres,U)
         Y = [0 for i in range(len(sommets_2)-2)]
         plt.plot(sommets_2[1:-1], Y, "og")
-        plt.axis([0, 1, -0.1, 1])
+        plt.axis([0, 1, -0.1, 2])
         plt.pause(0.1)
 
         t=t+dt

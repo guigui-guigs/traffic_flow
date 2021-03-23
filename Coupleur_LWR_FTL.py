@@ -45,21 +45,27 @@ def ajout_voitures_FTL(debut_FTL, sommets, nb_voitures, taille_voiture, U, U_tra
     new_sommets = sommets[:]
     new_U = U[:]
     saturation = False
-    if len(sommets) > 3:
-        derniere_voiture = sommets[1]
+    reste_U_transfert = U_transfert
+    reste_voitures = nb_voitures
+    if len(new_sommets) > 2:
+        derniere_voiture = new_sommets[1]
     else :
         derniere_voiture = debut_FTL 
+    
     for i in range (1,nb_voitures + 1):
         if len(new_sommets) > 2:
-            if derniere_voiture - 2*i*taille_voiture < debut_FTL:
+            if (derniere_voiture - 2*i*taille_voiture < debut_FTL):
                 saturation = True
             else : 
                 new_sommets = np.insert(new_sommets, 1, derniere_voiture - i*taille_voiture)
+                reste_voitures = reste_voitures - 1
         else : 
             new_sommets = np.insert(new_sommets, i, debut_FTL + i*taille_voiture)
+            reste_voitures = reste_voitures - 1
         if saturation == False :
             new_U.insert(0, U_transfert/nb_voitures) # on répartit la densité sur le nombre de mailles qu'on crée
-    return [new_sommets, new_U, saturation]
+            reste_U_transfert = reste_U_transfert - U_transfert/nb_voitures
+    return [new_sommets, new_U, reste_voitures, reste_U_transfert]
 
 def coupleur_FTLversLWR(x2): 
     L2 = 0.4 # fin de la zone du péage
