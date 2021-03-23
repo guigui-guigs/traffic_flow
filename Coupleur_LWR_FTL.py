@@ -64,7 +64,7 @@ def ajout_voitures_FTL(debut_FTL, sommets, nb_voitures, taille_voiture, U, U_tra
             reste_voitures = reste_voitures - 1
         if saturation == False :
             new_U.insert(0, U_transfert/nb_voitures) # on répartit la densité sur le nombre de mailles qu'on crée
-            reste_U_transfert = reste_U_transfert - U_transfert/nb_voitures
+    reste_U_transfert = reste_U_transfert - (U_transfert/nb_voitures)*(nb_voitures-reste_voitures)
     return [new_sommets, new_U, reste_voitures, reste_U_transfert]
 
 def coupleur_FTLversLWR(x2): 

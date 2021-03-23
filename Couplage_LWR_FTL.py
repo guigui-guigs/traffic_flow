@@ -26,14 +26,14 @@ def main():
     taille_voiture = dx
 
     Vmax_LWR1 = 0.01
-    Vmax_FTL = 4*dx
+    Vmax_FTL = 50*dx
     Vmax_LWR2 = 0.01
 
     M1 = 100 # nombre de voitures dans la zone LWR 1
 
     # Définition des différentes zones de circulation entre [0;1]
     x1 = 0.4 # début de la zone FTL
-    x2 = 0.8 # fin de la zone FTL 
+    x2 = 0.6 # fin de la zone FTL 
 
     N1 = math.floor(x1/dx) 
     N3 = math.floor((1-x2)/dx) 
@@ -78,7 +78,7 @@ def main():
     plt.plot(centres,U)
     Y = [0 for i in range(len(sommets_2)-2)]
     plt.plot(sommets_2[1:-1], Y, "og")
-    plt.axis([0, 1, -0.1, 2])
+    plt.xlim([0, 1])
     plt.pause(0.5)
 
     while t<T: 
@@ -104,7 +104,6 @@ def main():
 
         # Calcul du dt 
         dt = min(dt_1, dt_2, dt_3)
-        print(dt)
             
         result_couplage_LWRversFTL = coupleur_LWRversFTL(U_1, sommets_1, check_surface, surface_tampon_1, x1)
         transfert_voitures_FTL += result_couplage_LWRversFTL[0]
@@ -133,8 +132,8 @@ def main():
         plt.plot(centres,U)
         Y = [0 for i in range(len(sommets_2)-2)]
         plt.plot(sommets_2[1:-1], Y, "og")
-        plt.axis([0, 1, -0.1, 2])
-        plt.pause(0.1)
+        plt.xlim([0, 1])
+        plt.pause(0.01)
 
         t=t+dt
 

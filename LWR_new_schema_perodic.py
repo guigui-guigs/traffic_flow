@@ -34,7 +34,7 @@ def f_prime(rho):
     return 1 - 2*rho
 
 def V(Vmax,x):
-    return Vmax*max([0,10-x])
+    return Vmax*max([0,0.5-x])
 
 road_length = 0.5
 simu_duration = 10 
