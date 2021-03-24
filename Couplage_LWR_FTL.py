@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
+import time
+
 def main():
 
     #########################################################
@@ -23,11 +25,11 @@ def main():
     T = simu_duration/dt
     taille_voiture = dx
 
-    Vmax_LWR1 = 0.01
+    Vmax_LWR1 = 0.1
     Vmax_FTL = 50*dx
-    Vmax_LWR2 = 0.01
+    Vmax_LWR2 = 0.1
 
-    M1 = 100 # nombre de voitures dans la zone LWR 1
+    M1 = 30 # nombre de voitures dans la zone LWR 1
 
     # Définition des différentes zones de circulation entre [0;1]
     x1 = 0.4 # début de la zone FTL
@@ -71,6 +73,7 @@ def main():
     t = 0
     centres = [*centres_1, *centres_2, *centres_3]
     U = [*U_1, *U_2, *U_3]
+    print(U)
     plt.figure(1)
     plt.clf()
     plt.plot(centres,U)
@@ -78,6 +81,8 @@ def main():
     plt.plot(sommets_2[1:-1], Y, "og")
     plt.xlim([0, 1])
     plt.pause(0.5)
+
+    first_plot = True
 
     while t<T: 
 
@@ -103,7 +108,9 @@ def main():
 
         # Calcul du dt 
         dt = min(dt_1, dt_2, dt_3)
-            
+        
+        surface_tampon_1 = (U[N1]-U[N1-1])*dx_1
+
         result_couplage_LWRversFTL = coupleur_LWRversFTL(U_1, sommets_1, check_surface, surface_tampon_1, x1)
         transfert_voitures_FTL += result_couplage_LWRversFTL[0]
         surface_tampon_1 = result_couplage_LWRversFTL[1]
@@ -130,6 +137,9 @@ def main():
         plt.plot(sommets_2[1:-1], Y, "og")
         plt.xlim([0, 1])
         plt.pause(0.01)
+        if first_plot:
+            time.sleep(10)
+        first_plot = False
 
         t=t+dt
 

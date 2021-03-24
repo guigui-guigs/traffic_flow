@@ -28,16 +28,14 @@ def coupleur_LWRversFTL(U, sommets, check_surface, surface_tampon, x1):
     # les surfaces initiales sont calculées en dehors de la fonction coupleur, uniquement avec la donnée de rho_0
     L1 = x1 # début de la zone du péage
     #### Couplage LWR --> FTL ####
-    i = 0
-    length = 0
-    while length < 0.3 and i < len(sommets)-1:
-        length = sommets[i]
-        i+=1
-    surface = U[i]*(sommets[i]-sommets[i-1])
+
+    N = len(sommets) - 1
+    surface = U[N-1]*(sommets[N]-sommets[N-1])
     voitures_versFTL = math.floor(surface/check_surface) 
     voitures_surface_tampon = math.floor(surface_tampon/check_surface) 
     surface_tampon = surface_tampon - (voitures_versFTL + voitures_surface_tampon)*check_surface
-    U_transfert = U[i]
+    U_transfert = U[N-1]
+    print(surface_tampon)
 
     return [voitures_versFTL + voitures_surface_tampon, surface_tampon, U_transfert]
 

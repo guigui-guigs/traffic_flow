@@ -184,7 +184,7 @@ def point_choc(centres,U):
 
 ##### EXEMPLES #####
 
-schemas_couplage("fixes","creneau","upwind", 50,0.004, 0.01, 0.1)
+#schemas_couplage("fixes","creneau","upwind", 50,0.004, 0.01, 0.1)
 #schemas_couplage("alea","creneau","upwind", 50, 0.004, 0.01, 0.1) 
-#schemas_couplage("FTL","creneau","upwind", 20, 0.004, 0.01, 0.1) 
+schemas_couplage("FTL","creneau","upwind", 20, 0.004, 0.01, 0.1) 
 #verif_entropic(0.2, 0.4)
